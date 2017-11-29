@@ -2,7 +2,7 @@
 
 set -ex
 
-pushd attendee-service-source
+pushd pal-stocks
   echo "Fetching Dependencies"
   ./mvnw clean compile > /dev/null
 
