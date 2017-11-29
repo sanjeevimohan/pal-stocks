@@ -16,10 +16,20 @@ resources:
     skip_cert_check: true
 
 jobs:
+- name: test
+  public: true
+  plan:
+  - get: pal-stocks
+    trigger: true
+  - task: test
+    file: pal-stocks/ci/tasks/test.yml
+
 - name: build
   public: true
   plan:
   - get: pal-stocks
+    trigger: true
+    passed: [test]
   - task: package
     file: pal-stocks/ci/tasks/package.yml
   - put: deploy-pal-stocks
