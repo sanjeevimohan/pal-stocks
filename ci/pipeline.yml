@@ -1,0 +1,28 @@
+resources:
+- name: pal-stocks
+  type: git
+  source:
+    uri: https://github.com/sanjeevimohan/pal-stocks
+    branch: master
+
+- name: deploy-pal-stocks
+  type: cf
+  source:
+    api: https://api.system.cumuluslabs.io
+    username: {{cf-user}}
+    password: {{cf-password}}
+    organization: msanjeevi-pal
+    space: sandbox
+    skip_cert_check: true
+
+jobs:
+- name: build
+  public: true
+  plan:
+  - get: pal-stocks
+  - task: package
+    file: pal-stocks/ci/tasks/package.yml
+  - put: deploy-pal-stocks
+    params:
+      manifest: pal-stocks/manifest.yml
+      path: package-output/pal-stocks.war

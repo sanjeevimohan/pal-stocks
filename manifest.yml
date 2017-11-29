@@ -1,0 +1,9 @@
+applications:
+- name: stocks
+  path: target/spring-rabbit-stocks-1.7.2.RELEASE.war
+  random-route: true
+  memory: 512M
+  instances: 1
+  buildpack: java_buildpack_offline
+  services:
+  - stockqueue
