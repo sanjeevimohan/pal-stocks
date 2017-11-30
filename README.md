@@ -10,11 +10,13 @@
     chmod 777 /usr/local/bin/fly
 6. Maven Wrapper
     mvn -N io.takari:maven:wrapper
-
+```
 fly -t concourse-lab login --concourse-url http://192.168.100.4:8080/
 fly set-pipeline -t concourse-lab -p pal-stocks -c ci/pipeline.yml -l ci/private.yml
 fly unpause-pipeline -t concourse-lab -p pal-stocks
 fly trigger-job -t concourse-lab -j pal-stocks/build
-
+```
+```
 xcode-select --install
 brew upgrade maven
+```
