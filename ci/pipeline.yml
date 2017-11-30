@@ -36,3 +36,16 @@ jobs:
     params:
       manifest: pal-stocks/manifest.yml
       path: package-output/pal-stocks.war
+
+- name: build-uat
+  public: true
+  plan:
+  - get: pal-stocks
+    trigger: false
+    passed: [build]
+  - task: package
+    file: pal-stocks/ci/tasks/package.yml
+  - put: deploy-pal-stocks
+    params:
+      manifest: pal-stocks/manifest-uat.yml
+      path: package-output/pal-stocks.war
