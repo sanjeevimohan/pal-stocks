@@ -17,13 +17,20 @@
 package org.springframework.amqp.rabbit.stocks.gateway;
 
 import java.io.UnsupportedEncodingException;
+import java.nio.charset.Charset;
 import java.util.UUID;
 
 import org.springframework.amqp.AmqpException;
+import org.springframework.amqp.core.FanoutExchange;
 import org.springframework.amqp.core.Message;
 import org.springframework.amqp.core.MessagePostProcessor;
 import org.springframework.amqp.rabbit.core.RabbitGatewaySupport;
+import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.amqp.rabbit.stocks.domain.TradeRequest;
+import org.springframework.amqp.rabbit.support.CorrelationData;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.annotation.Configuration;
 
 /**
  * Rabbit implementation of {@link StockServiceGateway} to send trade requests to an external process.
@@ -31,27 +38,34 @@ import org.springframework.amqp.rabbit.stocks.domain.TradeRequest;
  * @author Mark Pollack
  * @author Gary Russell
  */
-public class RabbitStockServiceGateway extends RabbitGatewaySupport implements StockServiceGateway {
 
+@Configuration
+public class RabbitStockServiceGateway implements StockServiceGateway {
+
+	@Value("${defaultReplyTo}")
 	private String defaultReplyTo;
+
+	@Autowired
+	private FanoutExchange fanout;
 
 	public void setDefaultReplyTo(String defaultReplyTo) {
 		this.defaultReplyTo = defaultReplyTo;
 	}
 
+	@Autowired
+	private RabbitTemplate template;
+
+	//private final Charset UTF8_CHARSET = Charset.forName("UTF-8");
+
 	public void send(TradeRequest tradeRequest) {
-		getRabbitTemplate().convertAndSend(tradeRequest, new MessagePostProcessor() {
+		template.convertAndSend(fanout.getName(), "app.stock.request", tradeRequest, new MessagePostProcessor() {
 			public Message postProcessMessage(Message message) throws AmqpException {
 				message.getMessageProperties().setReplyTo(defaultReplyTo);
-				try {
-					message.getMessageProperties().setCorrelationId(UUID.randomUUID().toString().getBytes("UTF-8"));
-				}
-				catch (UnsupportedEncodingException e) {
-					throw new AmqpException(e);
-				}
+
+				//message.getMessageProperties().setCorrelationId(UUID.randomUUID().toString().getBytes(UTF8_CHARSET));
 				return message;
 			}
-		});
+		}, new CorrelationData(UUID.randomUUID().toString()));
 	}
 
 }

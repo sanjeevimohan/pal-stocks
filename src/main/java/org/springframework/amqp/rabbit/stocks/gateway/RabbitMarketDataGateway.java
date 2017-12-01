@@ -24,10 +24,14 @@ import java.util.Random;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
+import org.springframework.amqp.core.TopicExchange;
 import org.springframework.amqp.rabbit.core.RabbitGatewaySupport;
+import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.amqp.rabbit.stocks.domain.Quote;
 import org.springframework.amqp.rabbit.stocks.domain.Stock;
 import org.springframework.amqp.rabbit.stocks.domain.StockExchange;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.scheduling.annotation.Scheduled;
 
 /**
  * Rabbit implementation of the {@link MarketDataGateway} for sending Market data.
@@ -35,7 +39,7 @@ import org.springframework.amqp.rabbit.stocks.domain.StockExchange;
  * @author Mark Pollack
  * @author Mark Fisher
  */
-public class RabbitMarketDataGateway extends RabbitGatewaySupport implements MarketDataGateway {
+public class RabbitMarketDataGateway implements MarketDataGateway {
 
 	private static Log logger = LogFactory.getLog(RabbitMarketDataGateway.class);
 
@@ -43,6 +47,8 @@ public class RabbitMarketDataGateway extends RabbitGatewaySupport implements Mar
 
 	private final List<MockStock> stocks = new ArrayList<MockStock>();
 
+	@Autowired
+	private RabbitTemplate template;
 
 	public RabbitMarketDataGateway() {
 		this.stocks.add(new MockStock("AAPL", StockExchange.nasdaq, 255));
@@ -61,13 +67,16 @@ public class RabbitMarketDataGateway extends RabbitGatewaySupport implements Mar
 		this.stocks.add(new MockStock("TM", StockExchange.nyse, 76));
 	}
 
+	@Autowired
+	private TopicExchange topic;
 
+	@Scheduled(fixedDelay = 5000)
 	public void sendMarketData() {
 		Quote quote = generateFakeQuote();
 		Stock stock = quote.getStock();
 		logger.info("Sending Market Data for " + stock.getTicker());
 		String routingKey = "app.stock.quotes."+ stock.getStockExchange() + "." + stock.getTicker();
-		getRabbitTemplate().convertAndSend(routingKey, quote);
+		template.convertAndSend(topic.getName(), routingKey, quote);
 	}
 
 	private Quote generateFakeQuote() {

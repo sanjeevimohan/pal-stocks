@@ -25,10 +25,12 @@ import java.util.concurrent.PriorityBlockingQueue;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.springframework.amqp.rabbit.annotation.RabbitListener;
 import org.springframework.amqp.rabbit.stocks.domain.Quote;
 import org.springframework.amqp.rabbit.stocks.domain.TradeRequest;
 import org.springframework.amqp.rabbit.stocks.domain.TradeResponse;
 import org.springframework.amqp.rabbit.stocks.gateway.StockServiceGateway;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Controller;
 import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.ModelAttribute;
@@ -48,7 +50,7 @@ public class QuoteController {
 
 	private StockServiceGateway stockServiceGateway;
 
-	private ConcurrentMap<String, TradeResponse> responses = new ConcurrentHashMap<String, TradeResponse>();
+	//private ConcurrentMap<String, TradeResponse> responses = new ConcurrentHashMap<String, TradeResponse>();
 
 	private Queue<Quote> quotes = new PriorityBlockingQueue<Quote>(100, new QuoteComparator());
 
@@ -58,22 +60,27 @@ public class QuoteController {
 		this.stockServiceGateway = stockServiceGateway;
 	}
 
+	private TradeResponse response;
+
+	@RabbitListener(queues = "#{stockRequestQueue.name}")
 	public void handleTrade(TradeResponse response) {
-		logger.info("Client received: " + response);
-		String key = response.getRequestId();
-		responses.putIfAbsent(key, response);
-		Collection<TradeResponse> queue = new ArrayList<TradeResponse>(responses.values());
-		long timestamp = System.currentTimeMillis() - timeout;
-		for (Iterator<TradeResponse> iterator = queue.iterator(); iterator.hasNext();) {
-			TradeResponse tradeResponse = iterator.next();
-			if (tradeResponse.getTimestamp() < timestamp) {
-				responses.remove(tradeResponse.getRequestId());
-			}
-		}
+		logger.info("Client received trade response: " + response);
+//		String key = response.getRequestId();
+//		responses.putIfAbsent(key, response);
+//		Collection<TradeResponse> queue = new ArrayList<TradeResponse>(responses.values());
+//		long timestamp = System.currentTimeMillis() - timeout;
+//		for (Iterator<TradeResponse> iterator = queue.iterator(); iterator.hasNext();) {
+//			TradeResponse tradeResponse = iterator.next();
+//			if (tradeResponse.getTimestamp() < timestamp) {
+//				responses.remove(tradeResponse.getRequestId());
+//			}
+//		}
+		this.response = response;
 	}
 
+	@RabbitListener(queues = "#{marketDataQueue.name}")
 	public void handleQuote(Quote message) {
-		logger.info("Client received: " + message);
+		logger.info("Client received quote: " + message);
 		long timestamp = System.currentTimeMillis() - timeout;
 		for (Iterator<Quote> iterator = quotes.iterator(); iterator.hasNext();) {
 			Quote quote = iterator.next();
@@ -124,7 +131,8 @@ public class QuoteController {
 	@RequestMapping(value = "/trade", method = RequestMethod.GET)
 	@ResponseBody
 	public TradeResponse response(@RequestParam String requestId) {
-		TradeResponse result = responses.get(requestId);
+		//TradeResponse result = responses.get(requestId);
+		TradeResponse result = this.response;
 		return result;
 	}
 
